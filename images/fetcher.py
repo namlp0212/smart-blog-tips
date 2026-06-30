@@ -55,15 +55,49 @@ def fetch_from_unsplash(keyword: str, count: int = 3) -> list[dict]:
     return []
 
 
+def fetch_free_fallback(keyword: str) -> dict | None:
+    """
+    Fallback: keyword-based image from loremflickr.com — no API key needed.
+    Returns a direct image URL based on keyword tags.
+    """
+    # Encode keyword: take first 2 words for better relevance
+    tags = ",".join(keyword.lower().split()[:3])
+    url = f"https://loremflickr.com/800/450/{tags}"
+    try:
+        # Follow redirect to get the actual image URL
+        resp = requests.get(url, timeout=10, allow_redirects=True)
+        if resp.status_code == 200 and "image" in resp.headers.get("Content-Type", ""):
+            return {
+                "url": resp.url,
+                "alt": keyword,
+                "photographer": "loremflickr",
+                "source": "loremflickr",
+            }
+    except Exception:
+        pass
+    # Final fallback: picsum (generic beautiful photos)
+    seed = abs(hash(keyword)) % 1000
+    return {
+        "url": f"https://picsum.photos/seed/{seed}/800/450",
+        "alt": keyword,
+        "photographer": "picsum",
+        "source": "picsum",
+    }
+
+
 def get_featured_image(keyword: str) -> dict | None:
-    """Get one featured image — try Pexels first, fallback to Unsplash."""
+    """Get one featured image — Pexels → Unsplash → loremflickr (free fallback)."""
     images = fetch_from_pexels(keyword, count=1)
     if not images:
         images = fetch_from_unsplash(keyword, count=1)
     if images:
         console.print(f"[green]Image found:[/green] {images[0]['source']} — {images[0]['url'][:60]}...")
         return images[0]
-    console.print("[yellow]No image found, post will have no featured image[/yellow]")
+    # Free fallback — always returns an image
+    image = fetch_free_fallback(keyword)
+    if image:
+        console.print(f"[green]Image found:[/green] {image['source']} (free fallback)")
+        return image
     return None
 
 
