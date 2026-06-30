@@ -4,6 +4,5 @@ __pycache__/
 *.pyc
 *.pyo
 logs/*.log
-data/published.json
 data/keywords_processed.csv
 .DS_Store
