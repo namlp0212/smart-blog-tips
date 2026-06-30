@@ -15,7 +15,7 @@ from datetime import datetime
 from rich.console import Console
 from rich.table import Table
 
-from config.settings import DATA_DIR, LOGS_DIR, POSTS_PER_RUN, WP_URL
+from config.settings import DATA_DIR, LOGS_DIR, POSTS_PER_RUN, WP_URL, SITE_URL
 from content.generator import generate_blog_post
 from content.formatter import clean_html, inject_faq_schema, inject_internal_links
 from images.fetcher import get_featured_image, download_image
@@ -68,6 +68,7 @@ def run_pipeline(
     limit: int = POSTS_PER_RUN,
     dry_run: bool = False,
     publisher: str = "auto",
+    auto_push: bool = True,
 ):
     """
     Run the full pipeline for a list of keywords.
@@ -87,6 +88,12 @@ def run_pipeline(
     if keywords is None:
         keywords = load_pending_keywords()
 
+    # Reorder keywords by topic cluster priority if no explicit list was given
+    if keywords:
+        published = load_published()
+        published_set = {r["keyword"].lower() for r in published}
+        keywords = _prioritize_by_cluster(keywords, published_set)
+
     if not keywords:
         console.print("[yellow]No pending keywords found.[/yellow]")
         return
@@ -97,7 +104,7 @@ def run_pipeline(
     published = load_published()
     results = []
 
-    for i, keyword in enumerate(keywords, 1):
+    for i, keyword in enumerate(keywords[:limit], 1):
         console.rule(f"[{i}/{len(keywords)}] {keyword}")
         try:
             result = _process_keyword(keyword, published, dry_run, mode)
@@ -105,20 +112,57 @@ def run_pipeline(
                 published.append(result)
                 results.append(result)
                 save_published(published)
-                # Regenerate index for local mode
                 if mode == "local" and not dry_run:
                     from publisher.local import save_index
                     save_index(published)
         except Exception as e:
             console.print(f"[red]Error processing '{keyword}': {e}[/red]")
             _log_error(keyword, str(e))
+        # Delay giữa các bài để tránh Groq rate limit
+        if i < len(keywords) and not dry_run:
+            import time
+            console.print("[dim]Chờ 15s...[/dim]")
+            time.sleep(15)
 
     _print_summary(results)
 
+    if results and not dry_run and mode == "local":
+        # Regenerate SEO files
+        from publisher.seo_files import generate_sitemap, generate_robots
+        generate_sitemap(published, SITE_URL)
+        generate_robots(SITE_URL)
+        console.print(f"[green]sitemap.xml + robots.txt updated[/green]")
+
+        # Auto-push to GitHub
+        if auto_push:
+            from publisher.github_push import push_output, has_remote
+            if has_remote():
+                push_output(post_titles=[r["title"] for r in results])
+            else:
+                console.print("[yellow]GitHub remote not set — skipping push.[/yellow]")
+                console.print("[dim]Run: git remote add origin https://github.com/USER/REPO.git[/dim]")
+
+
+def _prioritize_by_cluster(keywords: list[str], published_set: set[str]) -> list[str]:
+    """Reorder keywords so cluster pages come before their pillar pages."""
+    from keyword_research.cluster import get_pending_cluster_keywords
+    pending = get_pending_cluster_keywords(published_set)
+    cluster_order = [p["keyword"] for p in pending]
+
+    # Keywords in cluster order first, then anything else (outside clusters)
+    ordered = [kw for kw in cluster_order if kw in keywords]
+    rest = [kw for kw in keywords if kw not in ordered]
+    return ordered + rest
+
 
 def _process_keyword(keyword: str, published: list[dict], dry_run: bool, mode: str) -> dict | None:
+    # Fetch cluster context for better internal linking and prompt enrichment
+    from keyword_research.cluster import get_cluster_for_keyword, mark_published
+    pillar, siblings = get_cluster_for_keyword(keyword)
+    cluster_context = f"This is part of the '{pillar}' topic cluster" if pillar else None
+
     # 1. Generate content
-    post_data = generate_blog_post(keyword)
+    post_data = generate_blog_post(keyword, cluster_context=cluster_context)
     content = clean_html(post_data["content"])
 
     # 2. Inject FAQ schema
@@ -127,9 +171,11 @@ def _process_keyword(keyword: str, published: list[dict], dry_run: bool, mode: s
     # 3. Inject internal links
     content = inject_internal_links(content, published)
 
-    # 4. SEO check
+    # 4. SEO check (include related_keywords for LSI check)
     post_data["content"] = content
     seo = check_seo_score(post_data)
+    from seo.optimizer import print_seo_report
+    print_seo_report(seo, console)
     console.print(f"[cyan]SEO score:[/cyan] {seo['score']}/100 ({seo['passed']}/{seo['total']} checks passed)")
 
     # 5. Fetch featured image (only for WordPress mode — local embeds via URL)

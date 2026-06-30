@@ -21,17 +21,24 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 
 def _ask_groq(prompt: str) -> str:
-    import requests
+    import requests, time
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "llama-3.3-70b-versatile",
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 4096,
+        "max_tokens": 8192,
         "temperature": 0.7,
     }
-    resp = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=60)
-    resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"].strip()
+    for attempt in range(3):
+        resp = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=60)
+        if resp.status_code == 429:
+            wait = 30 * (attempt + 1)
+            console.print(f"[yellow]Groq rate limit — chờ {wait}s...[/yellow]")
+            time.sleep(wait)
+            continue
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"].strip()
+    raise RuntimeError("Groq rate limit sau 3 lần thử")
 
 
 def _ask_anthropic(prompt: str) -> str:
@@ -69,20 +76,36 @@ def _ask(prompt: str) -> str:
     return _ask_claude_cli(prompt)
 
 
-def generate_blog_post(keyword: str, related_keywords: list[str] = None) -> dict:
+def generate_blog_post(
+    keyword: str,
+    related_keywords: list[str] = None,
+    cluster_context: str = None,
+) -> dict:
     console.print(f"[cyan]Generating content for:[/cyan] {keyword}")
+    if cluster_context:
+        console.print(f"[dim]Cluster context: {cluster_context}[/dim]")
+
+    # Auto-fetch related keywords from Google autocomplete if not provided
+    if not related_keywords:
+        try:
+            from keyword_research.fetcher import get_google_autocomplete
+            suggestions = get_google_autocomplete(keyword)
+            related_keywords = suggestions[:8] if suggestions else None
+        except Exception:
+            pass
 
     title = _generate_title(keyword)
     console.print(f"[green]Title:[/green] {title}")
 
-    content_html = _ask(build_blog_post_prompt(keyword, related_keywords))
+    content_html = _ask(build_blog_post_prompt(keyword, related_keywords, cluster_context))
     content_html = content_html.strip()
     word_count = len(content_html.split())
     console.print(f"[green]Content generated:[/green] ~{word_count} words")
 
     if word_count < MIN_WORD_COUNT:
-        console.print(f"[yellow]Content short ({word_count} words), regenerating...[/yellow]")
-        content_html = _ask(build_blog_post_prompt(keyword, related_keywords)).strip()
+        console.print(f"[yellow]Content short ({word_count} words), regenerating with expanded prompt...[/yellow]")
+        content_html = _ask(build_blog_post_prompt(keyword, related_keywords, cluster_context)).strip()
+        word_count = len(content_html.split())
 
     meta_desc = _ask(build_meta_description_prompt(keyword, content_html)).strip()
 
@@ -92,7 +115,9 @@ def generate_blog_post(keyword: str, related_keywords: list[str] = None) -> dict
         "slug": _keyword_to_slug(keyword),
         "content": content_html,
         "meta_description": meta_desc,
-        "word_count": len(content_html.split()),
+        "word_count": word_count,
+        "related_keywords": related_keywords or [],
+        "cluster_context": cluster_context,
     }
 
 

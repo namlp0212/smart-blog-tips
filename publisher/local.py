@@ -93,6 +93,14 @@ POST_TEMPLATE = """<!DOCTYPE html>
   <meta property="og:title" content="%%TITLE%%"/>
   <meta property="og:description" content="%%META_DESC%%"/>
   <meta property="og:type" content="article"/>
+  <meta property="og:url" content="%%CANONICAL%%"/>
+  <meta property="og:image" content="%%OG_IMAGE%%"/>
+  <meta property="og:site_name" content="%%SITE_NAME%%"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="%%TITLE%%"/>
+  <meta name="twitter:description" content="%%META_DESC%%"/>
+  <meta name="twitter:image" content="%%OG_IMAGE%%"/>
+  <link rel="canonical" href="%%CANONICAL%%"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
@@ -300,6 +308,13 @@ NICHE_MAP = {
 }
 
 
+def _extract_first_image(content: str) -> str | None:
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(content, "lxml")
+    img = soup.find("img", src=True)
+    return img["src"] if img else None
+
+
 def _niche_class(keyword: str) -> tuple[str, str]:
     kw = keyword.lower()
     for k, v in NICHE_MAP.items():
@@ -326,6 +341,11 @@ def save_post(post_data: dict, seo_score: int = 0) -> dict:
     read_time = max(1, word_count // 200)
     niche_cls, niche_label = _niche_class(post_data["keyword"])
 
+    from config.settings import SITE_URL
+    canonical_url = f"{SITE_URL.rstrip('/')}/{slug}.html"
+    # Use first image in content as OG image, fallback to a generic placeholder
+    og_image = _extract_first_image(content) or f"{SITE_URL.rstrip('/')}/og-default.png"
+
     html = (POST_TEMPLATE
         .replace("%%TITLE%%", post_data["title"])
         .replace("%%META_DESC%%", post_data.get("meta_description", ""))
@@ -336,6 +356,9 @@ def save_post(post_data: dict, seo_score: int = 0) -> dict:
         .replace("%%SCHEMA%%", schema)
         .replace("%%READ_TIME%%", str(read_time))
         .replace("%%NICHE%%", niche_label)
+        .replace("%%CANONICAL%%", canonical_url)
+        .replace("%%OG_IMAGE%%", og_image)
+        .replace("%%SITE_NAME%%", SITE_NAME)
     )
 
     with open(filepath, "w", encoding="utf-8") as f:
