@@ -85,6 +85,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
+  <meta name="google-site-verification" content="O8DsHWRXRJ1vt3f2Th4q-pxR2StGamaRJZwWFLWQ6-0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>%%TITLE%% | """ + SITE_NAME + """</title>
   <meta name="description" content="%%META_DESC%%"/>
@@ -184,6 +185,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
+  <meta name="google-site-verification" content="O8DsHWRXRJ1vt3f2Th4q-pxR2StGamaRJZwWFLWQ6-0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>""" + SITE_NAME + """ — """ + SITE_TAGLINE + """</title>
   <meta name="description" content="Expert guides on SEO, blogging, affiliate marketing and making passive income online."/>
