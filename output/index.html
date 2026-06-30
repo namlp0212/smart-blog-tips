@@ -2,91 +2,285 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>SEO Blog — All Posts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Blog Tips — SEO, Blogging & Passive Income Strategies</title>
+  <meta name="description" content="Expert guides on SEO, blogging, affiliate marketing and making passive income online."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
-    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-    h1 { color: #111; } table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-    th { background: #f4f4f4; padding: 10px; text-align: left; border-bottom: 2px solid #ddd; }
-    td { padding: 10px; border-bottom: 1px solid #eee; }
-    a { color: #0070f3; text-decoration: none; } a:hover { text-decoration: underline; }
-    .badge { background: #e6f4ea; color: #1e7e34; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #0f766e;
+    --primary-light: #14b8a6;
+    --primary-bg: #f0fdfa;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --bg: #ffffff;
+    --bg-alt: #f8fafc;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+  }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         color: var(--text); background: var(--bg); line-height: 1.6; }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { color: var(--primary-light); }
+  img { max-width: 100%; height: auto; }
+
+  /* NAV */
+  nav {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 8px rgba(0,0,0,.06);
+  }
+  .nav-inner {
+    max-width: 1100px; margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
+  }
+  .nav-brand { font-size: 1.15rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: .5rem; }
+  .nav-brand span { font-size: 1.3rem; }
+  .nav-links { display: flex; gap: 1.5rem; }
+  .nav-links a { font-size: .9rem; color: var(--text-muted); font-weight: 500; transition: color .2s; }
+  .nav-links a:hover { color: var(--primary); }
+
+  /* FOOTER */
+  footer {
+    background: #0f172a; color: #94a3b8;
+    text-align: center; padding: 2.5rem 1.5rem;
+    font-size: .875rem; margin-top: 5rem;
+  }
+  footer a { color: var(--primary-light); }
+  footer strong { color: #fff; }
+
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #0f766e 100%);
+      color: white; text-align: center;
+      padding: 5rem 1.5rem 4rem;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800;
+      letter-spacing: -.03em; line-height: 1.15; margin-bottom: 1rem;
+    }
+    .hero h1 span { color: #5eead4; }
+    .hero p { font-size: 1.1rem; opacity: .8; max-width: 520px; margin: 0 auto 2rem; }
+    .hero-stats {
+      display: flex; justify-content: center; gap: 2.5rem; flex-wrap: wrap;
+      margin-top: 2.5rem;
+    }
+    .hero-stats .stat { text-align: center; }
+    .hero-stats .stat strong { display: block; font-size: 1.8rem; font-weight: 800; color: #5eead4; }
+    .hero-stats .stat span { font-size: .8rem; opacity: .7; text-transform: uppercase; letter-spacing: .08em; }
+
+    .section { max-width: 1100px; margin: 0 auto; padding: 3.5rem 1.5rem; }
+    .section-title {
+      font-size: 1.5rem; font-weight: 700; color: #0f172a;
+      margin-bottom: 1.5rem; display: flex; align-items: center; gap: .6rem;
+    }
+    .section-title::after {
+      content: ''; flex: 1; height: 2px; background: var(--border);
+    }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+
+    .card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      transition: transform .2s, box-shadow .2s;
+      display: flex; flex-direction: column;
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+    .card-niche {
+      padding: .8rem 1.2rem;
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em;
+    }
+    .card-body { padding: 0 1.2rem 1.4rem; flex: 1; display: flex; flex-direction: column; }
+    .card-title {
+      font-size: 1rem; font-weight: 600; color: #0f172a;
+      line-height: 1.4; margin-bottom: .6rem;
+    }
+    .card-title a { color: inherit; }
+    .card-title a:hover { color: var(--primary); }
+    .card-meta {
+      margin-top: auto; display: flex; align-items: center;
+      justify-content: space-between; font-size: .78rem; color: var(--text-muted);
+      padding-top: .9rem; border-top: 1px solid var(--border);
+    }
+    .card-seo {
+      background: #dcfce7; color: #15803d;
+      padding: .15rem .5rem; border-radius: 20px; font-weight: 600; font-size: .72rem;
+    }
+
+    .niche-colors { --c: var(--primary); }
+    .niche-seo       { background: #eff6ff; color: #1d4ed8; }
+    .niche-blogging  { background: #fdf4ff; color: #7c3aed; }
+    .niche-affiliate { background: #fff7ed; color: #c2410c; }
+    .niche-ai        { background: #f0fdf4; color: #15803d; }
+    .niche-income    { background: #fefce8; color: #a16207; }
+    .niche-marketing { background: #fff1f2; color: #be123c; }
+
+    @media (max-width: 640px) {
+      .hero { padding: 3.5rem 1rem 3rem; }
+      .hero-stats { gap: 1.5rem; }
+      .grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-  <h1>SEO Blog — 10 Posts</h1>
-  <table>
-    <thead><tr><th>Title</th><th>Keyword</th><th>Words</th><th>SEO</th><th>Date</th></tr></thead>
-    <tbody>
-        <tr>
-          <td><a href="how-to-build-backlinks-for-free.html">Ultimate Guide: How to Build Backlinks for Free</a></td>
-          <td>how to build backlinks for free</td>
-          <td>1171</td>
-          <td><span class="badge">56/100</span></td>
-          <td>2026-06-30</td>
-        </tr>
-        <tr>
-          <td><a href="best-tools-for-content-marketing.html">Ultimate Guide: Best Tools for Content Marketing</a></td>
-          <td>best tools for content marketing</td>
-          <td>941</td>
-          <td><span class="badge">56/100</span></td>
-          <td>2026-06-30</td>
-        </tr>
-        <tr>
-          <td><a href="how-to-rank-on-google-first-page.html">Ultimate Guide: How to Rank on Google First Page</a></td>
-          <td>how to rank on google first page</td>
-          <td>1012</td>
-          <td><span class="badge">44/100</span></td>
-          <td>2026-06-30</td>
-        </tr>
-        <tr>
-          <td><a href="chatgpt-prompts-for-blog-writing.html">Best ChatGPT Prompts for Blog Writing</a></td>
-          <td>chatgpt prompts for blog writing</td>
-          <td>988</td>
-          <td><span class="badge">44/100</span></td>
-          <td>2026-06-30</td>
-        </tr>
-        <tr>
-          <td><a href="how-to-make-money-with-google-adsense.html">Ultimate Guide: How to Make Money with Google Adsense</a></td>
-          <td>how to make money with google adsense</td>
-          <td>1007</td>
-          <td><span class="badge">67/100</span></td>
-          <td>2026-06-30</td>
-        </tr>
-        <tr>
-          <td><a href="best-affiliate-programs-for-beginners.html">Ultimate Guide: Best Affiliate Programs for Beginners</a></td>
-          <td>best affiliate programs for beginners</td>
-          <td>1100</td>
-          <td><span class="badge">56/100</span></td>
-          <td>2026-06-30</td>
-        </tr>
-        <tr>
-          <td><a href="how-to-write-seo-blog-posts-fast.html">Ultimate Guide: How to Write SEO Blog Posts Fast</a></td>
-          <td>how to write SEO blog posts fast</td>
-          <td>1117</td>
-          <td><span class="badge">67/100</span></td>
-          <td>2026-06-30</td>
-        </tr>
-        <tr>
-          <td><a href="how-to-get-free-traffic-from-google.html">Ultimate Guide: How to Get Free Traffic from Google</a></td>
-          <td>how to get free traffic from google</td>
-          <td>1236</td>
-          <td><span class="badge">67/100</span></td>
-          <td>2026-06-30</td>
-        </tr>
-        <tr>
-          <td><a href="best-free-keyword-research-tools.html">Ultimate Guide: Best Free Keyword Research Tools</a></td>
-          <td>best free keyword research tools</td>
-          <td>1054</td>
-          <td><span class="badge">56/100</span></td>
-          <td>2026-06-30</td>
-        </tr>
-        <tr>
-          <td><a href="how-to-start-a-blog-and-make-money.html">How to Start a Blog and Make Money: The Complete Beginner's Guide</a></td>
-          <td>how to start a blog and make money</td>
-          <td>1248</td>
-          <td><span class="badge">78/100</span></td>
-          <td>2026-06-29</td>
-        </tr></tbody>
-  </table>
+<nav>
+  <div class="nav-inner">
+    <a class="nav-brand" href="/index.html"><span>✦</span> Smart Blog Tips</a>
+    <div class="nav-links">
+      <a href="/index.html">Home</a>
+      <a href="/index.html#seo">SEO</a>
+      <a href="/index.html#affiliate">Affiliate</a>
+      <a href="/index.html#ai">AI Tools</a>
+    </div>
+  </div>
+</nav>
+  <div class="hero">
+    <h1>Master SEO, Blogging &<br/><span>Passive Income</span></h1>
+    <p>Practical guides to grow your traffic, monetize your blog, and build income streams that work while you sleep.</p>
+    <div class="hero-stats">
+      <div class="stat"><strong>10</strong><span>Articles</span></div>
+      <div class="stat"><strong>100%</strong><span>Free</span></div>
+      <div class="stat"><strong>SEO</strong><span>Optimized</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📚 All Articles</div>
+    <div class="grid">
+      
+      <div class="card">
+        <div class="card-niche niche-seo">Guide</div>
+        <div class="card-body">
+          <div class="card-title">
+            <a href="how-to-build-backlinks-for-free.html">Ultimate Guide: How to Build Backlinks for Free</a>
+          </div>
+          <div class="card-meta">
+            <span>📅 2026-06-30 &nbsp;·&nbsp; ⏱ 5 min</span>
+            <span class="card-seo">56/100</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-niche niche-marketing">Marketing</div>
+        <div class="card-body">
+          <div class="card-title">
+            <a href="best-tools-for-content-marketing.html">Ultimate Guide: Best Tools for Content Marketing</a>
+          </div>
+          <div class="card-meta">
+            <span>📅 2026-06-30 &nbsp;·&nbsp; ⏱ 4 min</span>
+            <span class="card-seo">56/100</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-niche niche-seo">Guide</div>
+        <div class="card-body">
+          <div class="card-title">
+            <a href="how-to-rank-on-google-first-page.html">Ultimate Guide: How to Rank on Google First Page</a>
+          </div>
+          <div class="card-meta">
+            <span>📅 2026-06-30 &nbsp;·&nbsp; ⏱ 5 min</span>
+            <span class="card-seo">44/100</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-niche niche-seo">Guide</div>
+        <div class="card-body">
+          <div class="card-title">
+            <a href="chatgpt-prompts-for-blog-writing.html">Best ChatGPT Prompts for Blog Writing</a>
+          </div>
+          <div class="card-meta">
+            <span>📅 2026-06-30 &nbsp;·&nbsp; ⏱ 4 min</span>
+            <span class="card-seo">44/100</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-niche niche-seo">Guide</div>
+        <div class="card-body">
+          <div class="card-title">
+            <a href="how-to-make-money-with-google-adsense.html">Ultimate Guide: How to Make Money with Google Adsense</a>
+          </div>
+          <div class="card-meta">
+            <span>📅 2026-06-30 &nbsp;·&nbsp; ⏱ 5 min</span>
+            <span class="card-seo">67/100</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-niche niche-affiliate">Affiliate</div>
+        <div class="card-body">
+          <div class="card-title">
+            <a href="best-affiliate-programs-for-beginners.html">Ultimate Guide: Best Affiliate Programs for Beginners</a>
+          </div>
+          <div class="card-meta">
+            <span>📅 2026-06-30 &nbsp;·&nbsp; ⏱ 5 min</span>
+            <span class="card-seo">56/100</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-niche niche-seo">SEO</div>
+        <div class="card-body">
+          <div class="card-title">
+            <a href="how-to-write-seo-blog-posts-fast.html">Ultimate Guide: How to Write SEO Blog Posts Fast</a>
+          </div>
+          <div class="card-meta">
+            <span>📅 2026-06-30 &nbsp;·&nbsp; ⏱ 5 min</span>
+            <span class="card-seo">67/100</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-niche niche-seo">Guide</div>
+        <div class="card-body">
+          <div class="card-title">
+            <a href="how-to-get-free-traffic-from-google.html">Ultimate Guide: How to Get Free Traffic from Google</a>
+          </div>
+          <div class="card-meta">
+            <span>📅 2026-06-30 &nbsp;·&nbsp; ⏱ 6 min</span>
+            <span class="card-seo">67/100</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-niche niche-seo">Guide</div>
+        <div class="card-body">
+          <div class="card-title">
+            <a href="best-free-keyword-research-tools.html">Ultimate Guide: Best Free Keyword Research Tools</a>
+          </div>
+          <div class="card-meta">
+            <span>📅 2026-06-30 &nbsp;·&nbsp; ⏱ 5 min</span>
+            <span class="card-seo">56/100</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-niche niche-seo">Guide</div>
+        <div class="card-body">
+          <div class="card-title">
+            <a href="how-to-start-a-blog-and-make-money.html">How to Start a Blog and Make Money: The Complete Beginner's Guide</a>
+          </div>
+          <div class="card-meta">
+            <span>📅 2026-06-29 &nbsp;·&nbsp; ⏱ 6 min</span>
+            <span class="card-seo">78/100</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<footer>
+  <p><strong>Smart Blog Tips</strong> — SEO, Blogging & Passive Income Strategies</p>
+  <p style="margin-top:.5rem">© 2026 All rights reserved.</p>
+</footer>
 </body>
 </html>

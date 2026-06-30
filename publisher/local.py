@@ -1,77 +1,318 @@
 """
 Local file publisher — saves posts as standalone HTML files in output/.
-No WordPress needed. Files can be opened in browser or deployed to any hosting.
 """
 
 import os
-import json
 from datetime import datetime
 from rich.console import Console
 
 console = Console()
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
 
+SITE_NAME = "Smart Blog Tips"
+SITE_TAGLINE = "SEO, Blogging & Passive Income Strategies"
+PRIMARY = "#0f766e"
+PRIMARY_LIGHT = "#14b8a6"
 
-HTML_TEMPLATE = """<!DOCTYPE html>
+COMMON_CSS = """
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #0f766e;
+    --primary-light: #14b8a6;
+    --primary-bg: #f0fdfa;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --bg: #ffffff;
+    --bg-alt: #f8fafc;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+  }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         color: var(--text); background: var(--bg); line-height: 1.6; }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { color: var(--primary-light); }
+  img { max-width: 100%; height: auto; }
+
+  /* NAV */
+  nav {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 8px rgba(0,0,0,.06);
+  }
+  .nav-inner {
+    max-width: 1100px; margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
+  }
+  .nav-brand { font-size: 1.15rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: .5rem; }
+  .nav-brand span { font-size: 1.3rem; }
+  .nav-links { display: flex; gap: 1.5rem; }
+  .nav-links a { font-size: .9rem; color: var(--text-muted); font-weight: 500; transition: color .2s; }
+  .nav-links a:hover { color: var(--primary); }
+
+  /* FOOTER */
+  footer {
+    background: #0f172a; color: #94a3b8;
+    text-align: center; padding: 2.5rem 1.5rem;
+    font-size: .875rem; margin-top: 5rem;
+  }
+  footer a { color: var(--primary-light); }
+  footer strong { color: #fff; }
+"""
+
+NAV_HTML = f"""<nav>
+  <div class="nav-inner">
+    <a class="nav-brand" href="/index.html"><span>✦</span> {SITE_NAME}</a>
+    <div class="nav-links">
+      <a href="/index.html">Home</a>
+      <a href="/index.html#seo">SEO</a>
+      <a href="/index.html#affiliate">Affiliate</a>
+      <a href="/index.html#ai">AI Tools</a>
+    </div>
+  </div>
+</nav>"""
+
+FOOTER_HTML = f"""<footer>
+  <p><strong>{SITE_NAME}</strong> — {SITE_TAGLINE}</p>
+  <p style="margin-top:.5rem">© {datetime.now().year} All rights reserved.</p>
+</footer>"""
+
+
+POST_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{title}</title>
-  <meta name="description" content="{meta_description}" />
-  <meta name="keywords" content="{keyword}" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>%%TITLE%% | """ + SITE_NAME + """</title>
+  <meta name="description" content="%%META_DESC%%"/>
+  <meta name="keywords" content="%%KEYWORD%%"/>
+  <meta property="og:title" content="%%TITLE%%"/>
+  <meta property="og:description" content="%%META_DESC%%"/>
+  <meta property="og:type" content="article"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    *, *::before, *::after {{ box-sizing: border-box; }}
-    body {{
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 18px; line-height: 1.7; color: #222;
-      max-width: 780px; margin: 0 auto; padding: 2rem 1.5rem;
-    }}
-    h1 {{ font-size: 2rem; line-height: 1.3; margin-bottom: 0.5rem; color: #111; }}
-    h2 {{ font-size: 1.5rem; margin-top: 2.5rem; color: #1a1a1a; border-bottom: 2px solid #eee; padding-bottom: 0.3rem; }}
-    h3 {{ font-size: 1.2rem; margin-top: 1.8rem; color: #333; }}
-    p {{ margin: 1rem 0; }}
-    ul, ol {{ padding-left: 1.5rem; margin: 1rem 0; }}
-    li {{ margin: 0.4rem 0; }}
-    a {{ color: #0070f3; text-decoration: none; }}
-    a:hover {{ text-decoration: underline; }}
-    strong {{ color: #111; }}
-    .meta {{ color: #666; font-size: 0.9rem; margin-bottom: 2rem; }}
-    .meta span {{ margin-right: 1rem; }}
-    .seo-badge {{ display: inline-block; background: #e6f4ea; color: #1e7e34;
-                  padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }}
-    hr {{ border: none; border-top: 1px solid #eee; margin: 2rem 0; }}
-    @media (max-width: 600px) {{ body {{ font-size: 16px; }} h1 {{ font-size: 1.6rem; }} }}
+""" + COMMON_CSS + """
+    .post-hero {
+      background: linear-gradient(135deg, var(--primary) 0%, #0d9488 100%);
+      color: white; padding: 4rem 1.5rem 3rem;
+      text-align: center;
+    }
+    .post-hero .category {
+      display: inline-block; background: rgba(255,255,255,.2);
+      padding: .3rem .9rem; border-radius: 20px;
+      font-size: .8rem; font-weight: 600; letter-spacing: .05em;
+      text-transform: uppercase; margin-bottom: 1.2rem;
+    }
+    .post-hero h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 700; line-height: 1.25;
+      max-width: 750px; margin: 0 auto .8rem; letter-spacing: -.02em;
+    }
+    .post-hero .post-meta {
+      font-size: .875rem; opacity: .85; display: flex;
+      justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem;
+    }
+    .post-hero .post-meta span { display: flex; align-items: center; gap: .3rem; }
+
+    .post-body {
+      max-width: 760px; margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+    .post-body h2 {
+      font-size: 1.45rem; font-weight: 700; color: #0f172a;
+      margin: 2.5rem 0 .75rem; padding-bottom: .5rem;
+      border-bottom: 2px solid var(--primary-bg);
+    }
+    .post-body h3 { font-size: 1.15rem; font-weight: 600; color: #1e293b; margin: 1.8rem 0 .5rem; }
+    .post-body p { margin-bottom: 1.1rem; color: #334155; font-size: 1.05rem; line-height: 1.75; }
+    .post-body ul, .post-body ol { padding-left: 1.5rem; margin-bottom: 1.2rem; }
+    .post-body li { margin-bottom: .5rem; color: #334155; line-height: 1.7; }
+    .post-body strong { color: #0f172a; font-weight: 600; }
+    .post-body a { color: var(--primary); border-bottom: 1px solid transparent; transition: border-color .2s; }
+    .post-body a:hover { border-color: var(--primary); }
+    .post-body img { border-radius: var(--radius); margin: 1.5rem 0; box-shadow: var(--shadow); }
+
+    .tip-box {
+      background: var(--primary-bg); border-left: 4px solid var(--primary);
+      padding: 1.1rem 1.3rem; border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 1.8rem 0;
+    }
+    .tip-box strong { color: var(--primary); }
+
+    .back-link {
+      display: inline-flex; align-items: center; gap: .4rem;
+      background: var(--bg-alt); border: 1px solid var(--border);
+      padding: .5rem 1rem; border-radius: 8px; font-size: .875rem;
+      color: var(--text-muted); font-weight: 500; margin-bottom: 2.5rem;
+      transition: all .2s;
+    }
+    .back-link:hover { background: var(--primary-bg); color: var(--primary); border-color: var(--primary); }
+
+    @media (max-width: 640px) {
+      .post-hero { padding: 3rem 1rem 2.5rem; }
+      .post-body { padding: 2rem 1rem 3rem; }
+    }
   </style>
 </head>
 <body>
-  <article>
-    <h1>{title}</h1>
-    <div class="meta">
-      <span>📅 {date}</span>
-      <span>🔑 {keyword}</span>
-      <span class="seo-badge">SEO {seo_score}/100</span>
+""" + NAV_HTML + """
+  <div class="post-hero">
+    <div class="category">%%NICHE%%</div>
+    <h1>%%TITLE%%</h1>
+    <div class="post-meta">
+      <span>📅 %%DATE%%</span>
+      <span>⏱ %%READ_TIME%% min read</span>
+      <span>🔑 %%KEYWORD%%</span>
     </div>
-    <hr/>
-    {content}
-  </article>
-  {schema}
+  </div>
+
+  <div class="post-body">
+    <a class="back-link" href="/index.html">← Back to all posts</a>
+    %%CONTENT%%
+  </div>
+  %%SCHEMA%%
+""" + FOOTER_HTML + """
 </body>
 </html>"""
 
 
+INDEX_TEMPLATE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>""" + SITE_NAME + """ — """ + SITE_TAGLINE + """</title>
+  <meta name="description" content="Expert guides on SEO, blogging, affiliate marketing and making passive income online."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+""" + COMMON_CSS + """
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #0f766e 100%);
+      color: white; text-align: center;
+      padding: 5rem 1.5rem 4rem;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800;
+      letter-spacing: -.03em; line-height: 1.15; margin-bottom: 1rem;
+    }
+    .hero h1 span { color: #5eead4; }
+    .hero p { font-size: 1.1rem; opacity: .8; max-width: 520px; margin: 0 auto 2rem; }
+    .hero-stats {
+      display: flex; justify-content: center; gap: 2.5rem; flex-wrap: wrap;
+      margin-top: 2.5rem;
+    }
+    .hero-stats .stat { text-align: center; }
+    .hero-stats .stat strong { display: block; font-size: 1.8rem; font-weight: 800; color: #5eead4; }
+    .hero-stats .stat span { font-size: .8rem; opacity: .7; text-transform: uppercase; letter-spacing: .08em; }
+
+    .section { max-width: 1100px; margin: 0 auto; padding: 3.5rem 1.5rem; }
+    .section-title {
+      font-size: 1.5rem; font-weight: 700; color: #0f172a;
+      margin-bottom: 1.5rem; display: flex; align-items: center; gap: .6rem;
+    }
+    .section-title::after {
+      content: ''; flex: 1; height: 2px; background: var(--border);
+    }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+
+    .card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      transition: transform .2s, box-shadow .2s;
+      display: flex; flex-direction: column;
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+    .card-niche {
+      padding: .8rem 1.2rem;
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em;
+    }
+    .card-body { padding: 0 1.2rem 1.4rem; flex: 1; display: flex; flex-direction: column; }
+    .card-title {
+      font-size: 1rem; font-weight: 600; color: #0f172a;
+      line-height: 1.4; margin-bottom: .6rem;
+    }
+    .card-title a { color: inherit; }
+    .card-title a:hover { color: var(--primary); }
+    .card-meta {
+      margin-top: auto; display: flex; align-items: center;
+      justify-content: space-between; font-size: .78rem; color: var(--text-muted);
+      padding-top: .9rem; border-top: 1px solid var(--border);
+    }
+    .card-seo {
+      background: #dcfce7; color: #15803d;
+      padding: .15rem .5rem; border-radius: 20px; font-weight: 600; font-size: .72rem;
+    }
+
+    .niche-colors { --c: var(--primary); }
+    .niche-seo       { background: #eff6ff; color: #1d4ed8; }
+    .niche-blogging  { background: #fdf4ff; color: #7c3aed; }
+    .niche-affiliate { background: #fff7ed; color: #c2410c; }
+    .niche-ai        { background: #f0fdf4; color: #15803d; }
+    .niche-income    { background: #fefce8; color: #a16207; }
+    .niche-marketing { background: #fff1f2; color: #be123c; }
+
+    @media (max-width: 640px) {
+      .hero { padding: 3.5rem 1rem 3rem; }
+      .hero-stats { gap: 1.5rem; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+""" + NAV_HTML + """
+  <div class="hero">
+    <h1>Master SEO, Blogging &<br/><span>Passive Income</span></h1>
+    <p>Practical guides to grow your traffic, monetize your blog, and build income streams that work while you sleep.</p>
+    <div class="hero-stats">
+      <div class="stat"><strong>%%TOTAL%%</strong><span>Articles</span></div>
+      <div class="stat"><strong>100%</strong><span>Free</span></div>
+      <div class="stat"><strong>SEO</strong><span>Optimized</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📚 All Articles</div>
+    <div class="grid">
+      %%CARDS%%
+    </div>
+  </div>
+""" + FOOTER_HTML + """
+</body>
+</html>"""
+
+NICHE_MAP = {
+    "seo": ("niche-seo", "SEO"),
+    "blogging": ("niche-blogging", "Blogging"),
+    "affiliate": ("niche-affiliate", "Affiliate"),
+    "ai tools": ("niche-ai", "AI Tools"),
+    "passive income": ("niche-income", "Passive Income"),
+    "marketing": ("niche-marketing", "Marketing"),
+    "monetization": ("niche-ai", "Monetization"),
+}
+
+
+def _niche_class(keyword: str) -> tuple[str, str]:
+    kw = keyword.lower()
+    for k, v in NICHE_MAP.items():
+        if k in kw:
+            return v
+    return ("niche-seo", "Guide")
+
+
 def save_post(post_data: dict, seo_score: int = 0) -> dict:
-    """
-    Save post as local HTML file.
-    Returns record dict with file path and local URL.
-    """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     slug = post_data["slug"]
     filename = f"{slug}.html"
     filepath = os.path.join(OUTPUT_DIR, filename)
 
-    # Extract schema tag if present
     content = post_data["content"]
     schema = ""
     if '<script type="application/ld+json">' in content:
@@ -79,14 +320,20 @@ def save_post(post_data: dict, seo_score: int = 0) -> dict:
         schema = content[idx:]
         content = content[:idx]
 
-    html = HTML_TEMPLATE.format(
-        title=post_data["title"],
-        meta_description=post_data.get("meta_description", ""),
-        keyword=post_data["keyword"],
-        date=datetime.now().strftime("%B %d, %Y"),
-        seo_score=seo_score,
-        content=content,
-        schema=schema,
+    word_count = post_data.get("word_count", 0)
+    read_time = max(1, word_count // 200)
+    niche_cls, niche_label = _niche_class(post_data["keyword"])
+
+    html = (POST_TEMPLATE
+        .replace("%%TITLE%%", post_data["title"])
+        .replace("%%META_DESC%%", post_data.get("meta_description", ""))
+        .replace("%%KEYWORD%%", post_data["keyword"])
+        .replace("%%DATE%%", datetime.now().strftime("%B %d, %Y"))
+        .replace("%%SEO_SCORE%%", str(seo_score))
+        .replace("%%CONTENT%%", content)
+        .replace("%%SCHEMA%%", schema)
+        .replace("%%READ_TIME%%", str(read_time))
+        .replace("%%NICHE%%", niche_label)
     )
 
     with open(filepath, "w", encoding="utf-8") as f:
@@ -100,7 +347,7 @@ def save_post(post_data: dict, seo_score: int = 0) -> dict:
         "slug": slug,
         "url": f"output/{filename}",
         "filepath": filepath,
-        "word_count": post_data.get("word_count", 0),
+        "word_count": word_count,
         "seo_score": seo_score,
         "published_at": datetime.utcnow().isoformat(),
         "status": "local",
@@ -108,42 +355,35 @@ def save_post(post_data: dict, seo_score: int = 0) -> dict:
 
 
 def save_index(published: list[dict]):
-    """Generate an index.html listing all published posts."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    rows = ""
+    cards = ""
     for p in sorted(published, key=lambda x: x.get("published_at", ""), reverse=True):
-        rows += f"""
-        <tr>
-          <td><a href="{p['slug']}.html">{p['title']}</a></td>
-          <td>{p['keyword']}</td>
-          <td>{p.get('word_count', '-')}</td>
-          <td><span class="badge">{p.get('seo_score', '-')}/100</span></td>
-          <td>{p.get('published_at', '')[:10]}</td>
-        </tr>"""
+        kw = p.get("keyword", "")
+        niche_cls, niche_label = _niche_class(kw)
+        date_str = p.get("published_at", "")[:10]
+        words = p.get("word_count", 0)
+        seo = p.get("seo_score", 0)
+        read_time = max(1, words // 200)
 
-    html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <title>SEO Blog — All Posts</title>
-  <style>
-    body {{ font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }}
-    h1 {{ color: #111; }} table {{ width: 100%; border-collapse: collapse; margin-top: 1rem; }}
-    th {{ background: #f4f4f4; padding: 10px; text-align: left; border-bottom: 2px solid #ddd; }}
-    td {{ padding: 10px; border-bottom: 1px solid #eee; }}
-    a {{ color: #0070f3; text-decoration: none; }} a:hover {{ text-decoration: underline; }}
-    .badge {{ background: #e6f4ea; color: #1e7e34; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; }}
-  </style>
-</head>
-<body>
-  <h1>SEO Blog — {len(published)} Posts</h1>
-  <table>
-    <thead><tr><th>Title</th><th>Keyword</th><th>Words</th><th>SEO</th><th>Date</th></tr></thead>
-    <tbody>{rows}</tbody>
-  </table>
-</body>
-</html>"""
+        cards += f"""
+      <div class="card">
+        <div class="card-niche {niche_cls}">{niche_label}</div>
+        <div class="card-body">
+          <div class="card-title">
+            <a href="{p['slug']}.html">{p['title']}</a>
+          </div>
+          <div class="card-meta">
+            <span>📅 {date_str} &nbsp;·&nbsp; ⏱ {read_time} min</span>
+            <span class="card-seo">{seo}/100</span>
+          </div>
+        </div>
+      </div>"""
+
+    html = (INDEX_TEMPLATE
+        .replace("%%TOTAL%%", str(len(published)))
+        .replace("%%CARDS%%", cards)
+    )
 
     with open(os.path.join(OUTPUT_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html)
